@@ -8,7 +8,8 @@ function checkAuthforUser() {
         }
         try {
             let payload= validateTokenForUser(token)
-            req.user=payload
+            console.log('validateTokenForUserpayload',payload);
+            req.users=payload
         } catch (error) {
             // console.log('err',error);
             

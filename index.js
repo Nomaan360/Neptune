@@ -2,12 +2,14 @@ const express=require('express')
 const path=require('path')
 const app=express()
 const cookieparser =require('cookie-parser')
-const Port=8000
+const Port=4000
 const userrouter=require('./router/users')
 const adminrouter=require('./router/admins')
 const mongoose =require('mongoose')
 const Categories=require('./models/categories')
 const fs = require('fs');
+const session = require('express-session');
+const passport = require('passport');
 
 const {checkAuthforUser}=require('./middleware/usermiddleware')
 
@@ -20,16 +22,23 @@ app.use(cookieparser())
 app.use(express.static(path.resolve('./public'))); //Serves resources from public folder
 app.use(checkAuthforUser())
 
+app.use(session({
+  resave: false,
+  saveUninitialized: true,
+  secret: 'SECRET' 
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 mongoose.connect("mongodb://127.0.0.1:27017/neptune").then(() =>
     console.log("Mongodb connected")
   );
 app.get('/',async(req,res)=>{
-    console.log('fs',fs);
     let categoris=await Categories.find({})
     console.log('rewrrte',categoris);
 
     res.render('home',{
-        user:req.user,
+        user:req.users,
         categories:categoris
     })
 })

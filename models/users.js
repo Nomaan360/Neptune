@@ -13,12 +13,12 @@ const Userschema=new mongoose.Schema({
     },
     number:{
         type:Number,
-        required:true,
-        unique:true
+    },
+    googleid:{
+        type:Number,
     },
     password:{
         type:String,
-        required:true
     },
     salt:{
         type:String,
@@ -27,6 +27,7 @@ const Userschema=new mongoose.Schema({
 
 Userschema.pre('save',function (next){
     const user=this
+    if(user.googleid!=null||user.googleid!='') next()
     if(!user.isModified('password')) return
     const salt='somerandopmnum'
     const hashpass=createHmac('sha256',salt)
@@ -49,6 +50,14 @@ Userschema.static("matchPassword",async function (number, password) {
 
     if(userpass!==hashpass)
         throw new Error("Incorrect Password");
+    let token= createTokenForUser(user)
+    return token
+
+});
+Userschema.static("oauthlogin",async function (email) {
+    const user =await this.findOne({ emaild:email });
+    if (!user) throw new Error("User Not found");
+    console.log('user',user);
     let token= createTokenForUser(user)
     return token
 
