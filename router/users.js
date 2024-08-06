@@ -107,7 +107,7 @@ router.get('/viewproducts/:pid',strictcheckauth,async(req,res)=>{
 })
 router.get('/chats',strictcheckauth,async(req,res)=>{
     
-    let users=await Users.find({userId: { $ne: req.users._id }});
+    let users=await Users.find({_id: { $ne: req.users._id }});
     res.render('./users/userchat',{
         users:users,
         user:req.users,
