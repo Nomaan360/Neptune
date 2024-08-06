@@ -1,6 +1,7 @@
 const mongoose=require('mongoose')
 const {createHmac,randomBytes} = require('crypto');
 const {createTokenForUser,validateTokenForUser}=require('../services/userauth')
+const { type } = require('os');
 const Userschema=new mongoose.Schema({
     firstname:{
         type:String,
@@ -16,6 +17,12 @@ const Userschema=new mongoose.Schema({
     },
     googleid:{
         type:Number,
+    },
+    lastlogin:{
+        type:String
+    },
+    islogin:{
+        type:Boolean
     },
     password:{
         type:String,
@@ -51,6 +58,20 @@ Userschema.static("matchPassword",async function (number, password) {
     if(userpass!==hashpass)
         throw new Error("Incorrect Password");
     let token= createTokenForUser(user)
+
+    var date = new Date();
+    var current_date = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+ date.getDate();
+    var current_time = date.getHours()+":"+date.getMinutes()+":"+ date.getSeconds();
+    console.log('current_time',current_time);
+    console.log('current_times', date.toTimeString().split(' ')[0]); // Outputs current time
+
+    await this.updateOne(
+        { _id: user._id },
+        {$set: {
+            lastlogin: current_date+' '+current_time,
+            islogin: true,
+        }}
+    )
     return token
 
 });
@@ -59,6 +80,20 @@ Userschema.static("oauthlogin",async function (email) {
     if (!user) throw new Error("User Not found");
     console.log('user',user);
     let token= createTokenForUser(user)
+    
+    var date = new Date();
+    var current_date = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+ date.getDate();
+    var current_time = date.getHours()+":"+date.getMinutes()+":"+ date.getSeconds();
+    console.log('current_time',current_time);
+    console.log('current_times', date.toTimeString().split(' ')[0]); // Outputs current time
+
+    await this.updateOne(
+        { _id: user._id },
+        {$set: {
+            lastlogin: current_date+' '+current_time,
+            islogin: true,
+        }}
+    )
     return token
 
 });

@@ -70,6 +70,13 @@ router.post('/login',async(req,res)=>{
 })
 
 router.get('/logout',async(req,res)=>{
+    let user=req.users
+    await Users.updateOne(
+        { _id: user._id },
+        {$set: {
+            islogin: false,
+        }}
+    )
     res.clearCookie('token')
     res.redirect('/')
 })
@@ -98,8 +105,28 @@ router.get('/viewproducts/:pid',strictcheckauth,async(req,res)=>{
 
     })
 })
+router.get('/chats',strictcheckauth,async(req,res)=>{
+    
+    let users=await Users.find({userId: { $ne: req.users._id }});
+    res.render('./users/userchat',{
+        users:users,
+        user:req.users,
+    });
+})
 
-
+router.get('/api/user/:id',strictcheckauth,async(req,res)=>{
+    try {
+        const user = await Users.find({_id:req.params.id}).exec();
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        console.log('user',user);
+        
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+})
 const passport = require('passport');
 var userProfile;
 

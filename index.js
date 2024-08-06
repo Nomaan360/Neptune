@@ -10,6 +10,9 @@ const Categories=require('./models/categories')
 const fs = require('fs');
 const session = require('express-session');
 const passport = require('passport');
+const { Server } = require("socket.io");
+const http = require("http");
+const {joinRoom,leaveRoom} = require("./room.js");
 
 const {checkAuthforUser}=require('./middleware/usermiddleware')
 
@@ -30,9 +33,40 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+const server = http.createServer(app);
+const io = new Server(server);
 mongoose.connect("mongodb://127.0.0.1:27017/neptune").then(() =>
     console.log("Mongodb connected")
   );
+io.on('connection',async(socket)=>{
+  let rid
+  socket.on('chatto',async(roomid)=>{
+    console.log('Room ID:', roomid);
+    try {
+      rid = await joinRoom(roomid);
+      if (rid) {
+        socket.join(rid);
+      } else {
+        console.error('Failed to join room');
+      }
+    } catch (error) {
+      console.error('Error joining room:', error);
+    }
+  })
+  
+  socket.on('send-message', (message) => {
+    if (rid) {
+      socket.to(rid).emit("receive-message", message);
+    } else {
+      console.error('No room ID found');
+    }
+  });
+
+  socket.on("disconnect", () => {
+    // leave room
+    leaveRoom(rid);
+  });
+})
 app.get('/',async(req,res)=>{
     let categoris=await Categories.find({})
     console.log('rewrrte',categoris);
@@ -47,7 +81,7 @@ app.use('/user',userrouter)
 
 app.use('/admin',adminrouter)
 
-app.listen(Port,()=>{
+server.listen(Port,()=>{
     console.log('hrhge');
 })
 
