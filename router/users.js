@@ -71,9 +71,16 @@ router.post('/login',async(req,res)=>{
 
 router.get('/logout',async(req,res)=>{
     let user=req.users
+    var date = new Date();
+    var current_date = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+ date.getDate();
+    var current_time = date.getHours()+":"+date.getMinutes()+":"+ date.getSeconds();
+    console.log('current_time',current_time);
+    console.log('current_times', date.toTimeString().split(' ')[0]); 
+
     await Users.updateOne(
         { _id: user._id },
         {$set: {
+            lastlogin: current_date+' '+current_time,
             islogin: false,
         }}
     )

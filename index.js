@@ -12,9 +12,11 @@ const session = require('express-session');
 const passport = require('passport');
 const { Server } = require("socket.io");
 const http = require("http");
-const {joinRoom,leaveRoom} = require("./room.js");
-
+const {joinRoom,addMessageToRoom,getMessagesFromRoom,roomsState} = require("./room.js");
+const cron = require('node-cron');
+const nodemailer = require('nodemailer');
 const {checkAuthforUser}=require('./middleware/usermiddleware')
+const Users=require('./models/users')
 
 app.use(express.urlencoded ({ extended: false }));
 
@@ -46,6 +48,10 @@ io.on('connection',async(socket)=>{
       rid = await joinRoom(roomid);
       if (rid) {
         socket.join(rid);
+        console.log('roomsState',roomsState);
+        let msg=await getMessagesFromRoom(rid);
+        console.log('msg',msg);
+        socket.emit("getmessage",msg);
       } else {
         console.error('Failed to join room');
       }
@@ -54,18 +60,20 @@ io.on('connection',async(socket)=>{
     }
   })
   
-  socket.on('send-message', (message) => {
+  socket.on('send-message', (message,userId) => {
     if (rid) {
+      console.log('userId',userId);
+      addMessageToRoom(rid, userId, message);
       socket.to(rid).emit("receive-message", message);
     } else {
       console.error('No room ID found');
     }
   });
 
-  socket.on("disconnect", () => {
-    // leave room
-    leaveRoom(rid);
-  });
+  // socket.on("disconnect", () => {
+  //  
+  //   leaveRoom(rid);
+  // });
 })
 app.get('/',async(req,res)=>{
     let categoris=await Categories.find({})
@@ -80,6 +88,34 @@ app.get('/',async(req,res)=>{
 app.use('/user',userrouter)
 
 app.use('/admin',adminrouter)
+
+// Setup the cron job to run every minute
+cron.schedule('0 * * * *', async (req,res) => {
+  try {
+    console.log('Cron job running...');
+    const date = new Date();
+    const current_date = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    const current_time = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+
+    console.log('Current time:', current_time);
+    console.log('Full time string:', date.toTimeString().split(' ')[0]);
+
+    // Find users who should be updated
+    const users = await Users.find({ islogin: true }); // Example: Find users who are currently logged in
+
+    // Update their last login time and status
+    for (const user of users) {
+      await Users.updateOne(
+        { _id: user._id },
+        { $set: { lastlogin: `${current_date} ${current_time}`, islogin: false } }
+      );
+    }
+    res.clearCookie('token')
+    console.log('User statuses updated.');
+  } catch (error) {
+    console.error('Error during cron job execution:', error);
+  }
+});
 
 server.listen(Port,()=>{
     console.log('hrhge');
